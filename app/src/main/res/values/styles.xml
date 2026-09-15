@@ -1,0 +1,19 @@
+<resources>
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#6750A4</item>
+        <item name="colorSecondary">#CCC2DC</item>
+        <item name="android:windowBackground">#1C1B1F</item>
+    </style>
+    <style name="AppTheme.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#6750A4</item>
+        <item name="colorSecondary">#E9DDFF</item>
+        <item name="android:windowBackground">#FEF7FF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1" xmlns:tools="http://schemas.android.com/tools">true</item>
+    </style>
+    <style name="AppTheme.Dark" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#D0BCFF</item>
+        <item name="colorSecondary">#CCC2DC</item>
+        <item name="android:windowBackground">#1C1B1F</item>
+    </style>
+</resources>
