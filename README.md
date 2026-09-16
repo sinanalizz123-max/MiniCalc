@@ -36,7 +36,13 @@ Zero dependencies, `minifyEnabled` + `shrinkResources`, and density-specific `mi
 
 ## Screenshots
 
-> Add screenshots to `docs/` and they will appear here. Recommended: `docs/screenshot-light.png` and `docs/screenshot-dark.png`.
+<table>
+<tr>
+<td align="center"><img src="docs/screenshot-light.png" width="260"><br><sub>Light</sub></td>
+<td align="center"><img src="docs/screenshot-dark.png" width="260"><br><sub>Dark</sub></td>
+<td align="center"><img src="docs/screenshot-dark2.png" width="260"><br><sub>Dark — SCI panel</sub></td>
+</tr>
+</table>
 
 ## Build
 
