@@ -23,7 +23,8 @@ android {
     }
     packaging {
         resources {
-            excludes += ['META-INF/**', '**/*.kotlin_metadata', 'DebugProbesKt.bin']
+            excludes += ['META-INF/**', 'DebugProbesKt.bin',
+                         'kotlin/**', '**/*.kotlin_builtins', '**/*.kotlin_metadata']
         }
     }
 }

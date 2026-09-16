@@ -1,1 +1,3 @@
-
+-keep class com.alisinan.minicalc.MainActivity { *; }
+-keep class com.alisinan.minicalc.MathEvaluator { *; }
+-dontwarn org.json.**

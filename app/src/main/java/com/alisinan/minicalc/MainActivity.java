@@ -6,9 +6,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.util.TypedValue;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
@@ -39,6 +41,7 @@ public class MainActivity extends Activity {
     private static final String KEY_THEME = "theme_mode";
     private static final String KEY_HAPTIC_TAP = "haptic_tap";
     private static final String KEY_HAPTIC_ERR = "haptic_error";
+    private static final String KEY_ANGLE = "angle_unit";
     private static final int MAX_HISTORY = 60;
 
     private static final List<String> OPS = Arrays.asList("÷", "×", "−", "+", "^", "%");
@@ -50,7 +53,6 @@ public class MainActivity extends Activity {
     private ScrollView displayScroll;
     private LinearLayout historyArea;
     private LinearLayout sciKeypad;
-    private TextView btnDegRad;
     private TextView btnSciToggle;
 
     private String currentExpr = "";
@@ -187,6 +189,7 @@ public class MainActivity extends Activity {
         themeMode = prefs.getInt(KEY_THEME, 0);
         hapticTap = prefs.getBoolean(KEY_HAPTIC_TAP, true);
         hapticError = prefs.getBoolean(KEY_HAPTIC_ERR, true);
+        isDeg = prefs.getBoolean(KEY_ANGLE, true);
     }
 
     private void persistSettings() {
@@ -194,11 +197,25 @@ public class MainActivity extends Activity {
                 .putInt(KEY_THEME, themeMode)
                 .putBoolean(KEY_HAPTIC_TAP, hapticTap)
                 .putBoolean(KEY_HAPTIC_ERR, hapticError)
+                .putBoolean(KEY_ANGLE, isDeg)
                 .apply();
     }
 
     private int dp(int v) {
         return Math.round(v * density);
+    }
+
+    private int adaptiveGapPx() {
+        float wDp = getResources().getDisplayMetrics().widthPixels / density;
+        float hDp = getResources().getDisplayMetrics().heightPixels / density;
+        float s = Math.min(wDp, hDp);
+        float g;
+        if (s < 300) g = 1f;
+        else if (s < 340) g = 1.5f;
+        else if (s < 380) g = 2f;
+        else if (s < 420) g = 3f;
+        else g = 4f;
+        return Math.round(g * density);
     }
 
     private RippleDrawable roundRect(int fill, int radiusDp) {
@@ -210,7 +227,7 @@ public class MainActivity extends Activity {
     }
 
     private TextView key(String label, int bgColor, int fgColor, float sizeSp, boolean bold) {
-        TextView t = new TextView(this);
+        FitTextView t = new FitTextView(this);
         t.setText(label);
         t.setTextColor(fgColor);
         t.setTextSize(sizeSp);
@@ -220,6 +237,48 @@ public class MainActivity extends Activity {
         t.setClickable(true);
         t.setFocusable(true);
         return t;
+    }
+
+    private static class FitTextView extends TextView {
+        FitTextView(Context c) {
+            super(c);
+            setSingleLine(true);
+            setIncludeFontPadding(false);
+            setEllipsize(TextUtils.TruncateAt.END);
+        }
+
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+            fitTo(w, h);
+        }
+
+        @Override
+        protected void onTextChanged(CharSequence text, int start, int lengthBefore, int after) {
+            super.onTextChanged(text, start, lengthBefore, after);
+            fitTo(getWidth(), getHeight());
+        }
+
+        private void fitTo(int w, int h) {
+            if (w <= 0 || h <= 0) return;
+            CharSequence s = getText();
+            if (s == null || s.length() == 0) return;
+            Paint p = new Paint();
+            p.setTypeface(getTypeface());
+            float fontPx = getTextSize();
+            p.setTextSize(fontPx);
+            float tw = p.measureText(s.toString());
+            Paint.FontMetrics fm = p.getFontMetrics();
+            float th = fm.descent - fm.ascent;
+            float maxW = w * 0.84f;
+            float maxH = h * 0.72f;
+            float scale = 1f;
+            if (tw > maxW) scale = Math.min(scale, maxW / tw);
+            if (th > maxH) scale = Math.min(scale, maxH / th);
+            float floor = 5f * getResources().getDisplayMetrics().density;
+            float target = Math.max(floor, fontPx * scale);
+            if (target < fontPx) setTextSize(TypedValue.COMPLEX_UNIT_PX, target);
+        }
     }
 
     private TextView chip(String label) {
@@ -240,14 +299,13 @@ public class MainActivity extends Activity {
     }
 
     private void refreshChips() {
-        styleChip(btnDegRad, isDeg);
         styleChip(btnSciToggle, isSciVisible);
     }
 
     private void addKeyRow(LinearLayout parent, String[] keys, boolean sci) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        int gap = dp(4);
+        int gap = adaptiveGapPx();
         row.setPadding(gap, gap, gap, gap);
 
         for (final String k : keys) {
@@ -268,7 +326,7 @@ public class MainActivity extends Activity {
 
             LinearLayout.LayoutParams lp =
                     new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
-            lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+            lp.setMargins(gap, gap, gap, gap);
             b.setLayoutParams(lp);
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -296,15 +354,8 @@ public class MainActivity extends Activity {
         topBar.setGravity(Gravity.CENTER);
         topBar.setPadding(dp(12), dp(12), dp(12), dp(2));
 
-        btnDegRad = chip("DEG");
         btnSciToggle = chip("SCI");
         TextView btnSettings = chip("SET");
-        btnDegRad.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleDegRad();
-            }
-        });
         btnSciToggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -319,7 +370,7 @@ public class MainActivity extends Activity {
         });
         refreshChips();
 
-        for (TextView c : new TextView[]{btnDegRad, btnSciToggle, btnSettings}) {
+        for (TextView c : new TextView[]{btnSciToggle, btnSettings}) {
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(40), 1f);
             lp.setMargins(dp(4), 0, dp(4), 0);
             topBar.addView(c, lp);
@@ -544,15 +595,6 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void toggleDegRad() {
-        isDeg = !isDeg;
-        btnDegRad.setText(isDeg ? "DEG" : "RAD");
-        refreshChips();
-        hapticTap();
-        Toast.makeText(this, isDeg ? "Degrees" : "Radians", Toast.LENGTH_SHORT).show();
-        calculatePreview();
-    }
-
     private void toggleSciPanel() {
         isSciVisible = !isSciVisible;
         sciKeypad.setVisibility(isSciVisible ? View.VISIBLE : View.GONE);
@@ -718,6 +760,44 @@ public class MainActivity extends Activity {
             }
         });
         content.addView(group);
+
+        TextView angleLabel = new TextView(this);
+        angleLabel.setText("ANGLES");
+        angleLabel.setTextSize(11f);
+        angleLabel.setLetterSpacing(0.08f);
+        angleLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        angleLabel.setTextColor(textSecondary);
+        angleLabel.setPadding(0, dp(14), 0, dp(6));
+        content.addView(angleLabel);
+
+        RadioGroup angleGroup = new RadioGroup(this);
+        angleGroup.setOrientation(RadioGroup.VERTICAL);
+        String[] angleNames = {"Degrees", "Radians"};
+        final int[] angleIds = new int[2];
+        for (int i = 0; i < 2; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setText(angleNames[i]);
+            rb.setTextSize(16f);
+            rb.setId(View.generateViewId());
+            rb.setPadding(dp(4), dp(8), 0, dp(8));
+            angleIds[i] = rb.getId();
+            angleGroup.addView(rb, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        angleGroup.check(angleIds[isDeg ? 0 : 1]);
+        angleGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup g, int checkedId) {
+                boolean wantDeg = checkedId == angleIds[0];
+                if (wantDeg != isDeg) {
+                    isDeg = wantDeg;
+                    persistSettings();
+                    hapticTap();
+                    calculatePreview();
+                }
+            }
+        });
+        content.addView(angleGroup);
 
         CheckBox tapBox = new CheckBox(this);
         tapBox.setText("Vibrate on tap");

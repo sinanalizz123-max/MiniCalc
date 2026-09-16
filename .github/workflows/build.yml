@@ -1,0 +1,37 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+      - run: gradle assembleRelease --no-daemon
+      - name: Show APK size
+        run: ls -lh app/build/outputs/apk/release/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minicalc-apk
+          path: app/build/outputs/apk/release/app-release.apk
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: MiniCalc v${{ github.run_number }}
+          body: |
+            Tiny Android calculator - under 2 MB.
+
+            Download app-release.apk below and install it on your phone.
+          files: app/build/outputs/apk/release/app-release.apk
