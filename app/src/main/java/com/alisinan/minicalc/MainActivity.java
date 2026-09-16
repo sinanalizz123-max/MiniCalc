@@ -43,6 +43,8 @@ public class MainActivity extends Activity {
     private static final String KEY_HAPTIC_ERR = "haptic_error";
     private static final String KEY_ANGLE = "angle_unit";
     private static final int MAX_HISTORY = 60;
+    private static final int MAX_DIGITS_PER_NUMBER = 15;
+    private static final int MAX_EXPR_LENGTH = 70;
 
     private static final List<String> OPS = Arrays.asList("÷", "×", "−", "+", "^", "%");
     private static final List<String> FUNCS = Arrays.asList(
@@ -471,8 +473,20 @@ public class MainActivity extends Activity {
         return false;
     }
 
+    private int digitsInCurrentNumber(String e) {
+        int c = 0;
+        for (int i = e.length() - 1; i >= 0; i--) {
+            char ch = e.charAt(i);
+            if (ch >= '0' && ch <= '9') c++;
+            else if (ch == '.') continue;
+            else break;
+        }
+        return c;
+    }
+
     private boolean canAppend(String k) {
         String e = currentExpr;
+        if (e.length() >= MAX_EXPR_LENGTH && !"⌫".equals(k) && !"C".equals(k)) return false;
         String last = e.isEmpty() ? "" : e.substring(e.length() - 1);
 
         if (FUNCS.contains(k)) return e.isEmpty() || !last.equals(")");
@@ -484,7 +498,8 @@ public class MainActivity extends Activity {
             return !last.equals(".");
         }
         if ("0123456789".contains(k)) {
-            return !last.equals(")") && !last.equals("!") && !last.equals("π");
+            if (last.equals(")") || last.equals("!") || last.equals("π")) return false;
+            return digitsInCurrentNumber(e) < MAX_DIGITS_PER_NUMBER;
         }
         if (".".equals(k)) {
             return !e.isEmpty() && !OPS.contains(last) && !last.equals("(")
@@ -583,7 +598,36 @@ public class MainActivity extends Activity {
     }
 
     private void updateDisplay() {
-        tvExpression.setText(currentExpr.isEmpty() ? "0" : currentExpr);
+        String txt = currentExpr.isEmpty() ? "0" : currentExpr;
+        tvExpression.setText(txt);
+        fitExpression();
+    }
+
+    private void fitExpression() {
+        if (tvExpression == null) return;
+        tvExpression.post(new Runnable() {
+            @Override
+            public void run() {
+                int w = tvExpression.getWidth();
+                if (w <= 0) return;
+                int avail = w - tvExpression.getPaddingLeft() - tvExpression.getPaddingRight();
+                if (avail <= 0) return;
+                String s = tvExpression.getText().toString();
+                if (s.isEmpty()) return;
+                Paint p = new Paint();
+                p.setTypeface(tvExpression.getTypeface());
+                float baseSp = 40f;
+                float minSp = 16f;
+                p.setTextSize(baseSp * getResources().getDisplayMetrics().scaledDensity);
+                float tw = p.measureText(s);
+                float targetSp = baseSp;
+                if (tw > avail * 0.98f) {
+                    targetSp = baseSp * (avail * 0.98f / tw);
+                    if (targetSp < minSp) targetSp = minSp;
+                }
+                tvExpression.setTextSize(targetSp);
+            }
+        });
     }
 
     private void scrollToCurrent() {

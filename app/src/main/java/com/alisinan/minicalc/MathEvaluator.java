@@ -1,5 +1,7 @@
 package com.alisinan.minicalc;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Locale;
 
 public class MathEvaluator {
@@ -95,12 +97,31 @@ public class MathEvaluator {
         if (Double.isNaN(val)) return "Error";
         if (Double.isInfinite(val)) return val > 0 ? "Infinity" : "-Infinity";
         if (val == 0) return "0";
-        if (val == Math.rint(val) && Math.abs(val) < 1e15) {
+        double abs = Math.abs(val);
+        if (abs >= 1e12 || (abs > 0 && abs < 1e-6)) {
+            String sci = String.format(Locale.US, "%.8E", val);
+            int e = sci.indexOf('E');
+            String mant = sci.substring(0, e);
+            String exp = sci.substring(e + 1);
+            mant = mant.replaceAll("0+$", "").replaceAll("\\.$", "");
+            exp = exp.replaceFirst("^\\+", "");
+            exp = exp.replaceFirst("^(-?)0+(\\d)", "$1$2");
+            if (exp.isEmpty() || exp.equals("-")) exp = "0";
+            return mant + "E" + exp;
+        }
+        if (val == Math.rint(val) && abs < 1e15) {
             return String.format(Locale.US, "%.0f", val);
         }
-        String res = String.format(Locale.US, "%.10f", val);
-        res = res.replaceAll("0+$", "").replaceAll("\\.$", "");
-        return res;
+        BigDecimal bd = BigDecimal.valueOf(val).setScale(10, RoundingMode.HALF_UP).stripTrailingZeros();
+        String plain = bd.toPlainString();
+        if (plain.length() > 16) {
+            String sci = String.format(Locale.US, "%.9E", val);
+            int e = sci.indexOf('E');
+            String mant = sci.substring(0, e).replaceAll("0+$", "").replaceAll("\\.$", "");
+            String exp = sci.substring(e + 1).replaceFirst("^\\+", "").replaceFirst("^(-?)0+(\\d)", "$1$2");
+            return mant + "E" + exp;
+        }
+        return plain;
     }
 
     private static class Parser {
