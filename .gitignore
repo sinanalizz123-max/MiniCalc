@@ -7,3 +7,4 @@ local.properties
 *.apk
 *.keystore
 .DS_Store
+AGENTS.md
