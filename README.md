@@ -2,13 +2,13 @@
 
 > A tiny, fast Android calculator. No ads. No accounts. No internet — just math.
 
-[![Build APK](https://github.com/sinanalizz123-max/MiniCalc/actions/workflows/build.yml/badge.svg)](https://github.com/sinanalizz123-max/MiniCalc/actions) [![Latest Release](https://img.shields.io/github/v/release/sinanalizz123-max/MiniCalc?label=release&color=4F46E5)](https://github.com/sinanalizz123-max/MiniCalc/releases) [![APK Size](https://img.shields.io/badge/APK-~110_KB-6366F1)](https://github.com/sinanalizz123-max/MiniCalc/releases) [![Min SDK](https://img.shields.io/badge/minSDK-23-8A8A8E)](app/build.gradle) [![License: MIT](https://img.shields.io/badge/License-MIT-F4F5F8?color=222)](#license)
+[![Build APK](https://github.com/sinanalizz123-max/MiniCalc/actions/workflows/build.yml/badge.svg)](https://github.com/sinanalizz123-max/MiniCalc/actions) [![Latest Release](https://img.shields.io/github/v/release/sinanalizz123-max/MiniCalc?label=release&color=4F46E5)](https://github.com/sinanalizz123-max/MiniCalc/releases) [![APK Size](https://img.shields.io/badge/APK-~116_KB-6366F1)](https://github.com/sinanalizz123-max/MiniCalc/releases) [![Min SDK](https://img.shields.io/badge/minSDK-23-8A8A8E)](app/build.gradle) [![License: MIT](https://img.shields.io/badge/License-MIT-F4F5F8?color=222)](#license)
 
-**MiniCalc** is a deliberately small calculator built with nothing but the Android framework itself. No Kotlin stdlib, no AndroidX, no Material library — that is why the entire app is ~110 KB while most calculators are 5–30 MB.
+**MiniCalc** is a deliberately small calculator built with nothing but the Android framework itself. No Kotlin stdlib, no AndroidX, no Material library — that is why the entire app is ~116 KB while most calculators are 5–30 MB.
 
 ### Download
 
-**[⬇ Latest APK — Releases](https://github.com/sinanalizz123-max/MiniCalc/releases)** → install `app-release.apk`
+**[⬇ Latest APK — Releases](https://github.com/sinanalizz123-max/MiniCalc/releases)** → install `MiniCalc_1.2.apk`
 
 On first install Android will ask you to allow *Install unknown apps* for your browser — allow it once.
 
@@ -17,9 +17,15 @@ On first install Android will ask you to allow *Install unknown apps* for your b
 ## Features
 
 - **Live preview** — answer updates as you type
-- **Scientific panel** — `sin` `cos` `tan` `asin` `acos` `atan` `√` `∛` `xʸ` `!` `ln` `log` `π` `e` and parentheses; toggle with **SCI**
+- **Cursor editing** — tap anywhere in the expression to place the cursor and edit any digit; select a span to replace it
+- **Slide to move** — glide left/right anywhere on the keys to move the cursor (Gboard spacebar-style), with a tick per character
+- **Scientific panel** — `sin` `cos` `tan` `asin` `acos` `atan` `√` `∛` `xʸ` `!` `ln` `log` `exp` `abs` `π` `e` and parentheses; toggle with **SCI**
+- **ANS + memory** — `ANS` recalls the last answer; `MC` `MR` `M+` `M−` with an `M` badge in the top bar
+- **Postfix `%`, `±` toggle** — `50%` → `0.5`; `±` flips the sign of the current number
 - **Degrees / Radians** — in **Settings → ANGLES**, persisted across restarts (default: Degrees)
-- **History** — last 60 calculations, tap any entry to reuse it, with **CLEAR**
+- **History** — last 60 calculations, tap any entry to load it back for editing, with **CLEAR**
+- **Tap to copy** — tap or long-press the expression or result to copy it
+- **Thousands separators** — optional `1,000` grouping in Settings
 - **Adaptive keys** — labels auto-shrink and gaps tighten in split-screen / small screens so nothing gets cut off, even with SCI open
 - **Theme** — System / Light / Dark (true dark `#121214`)
 - **Haptics** — tap and error vibration, each toggleable in Settings
@@ -30,7 +36,7 @@ On first install Android will ask you to allow *Install unknown apps* for your b
 | App | APK size | Libraries |
 | --- | --- | --- |
 | Typical calculator | 5–30 MB | Kotlin + AndroidX + Material + … |
-| **MiniCalc** | **~110 KB** | **None — Android framework only** |
+| **MiniCalc** | **~116 KB** | **None — Android framework only** |
 
 Zero dependencies, `minifyEnabled` + `shrinkResources`, and density-specific `mipmap` icons. The whole UI is built programmatically in one file (`MainActivity.java`) — no XML layouts.
 
@@ -59,8 +65,10 @@ Termux Studio provides the native `aarch64` `aapt2` that Gradle needs on this de
 
 ```bash
 studio build ~/MiniCalc :app:assembleRelease
-# → app/build/outputs/apk/release/MiniCalc_1.1.apk  (signed with debug keystore)
+# → app/build/outputs/apk/release/MiniCalc_1.2.apk  (release-key signed)
 ```
+
+Release signing uses a keystore outside the repo (passwords via environment only — see `app/build.gradle`); machines without the key fall back to debug signing so CI stays green.
 
 Toolchain: AGP 8.5.2 · Gradle 9.7.1 · compileSdk / targetSdk 34 · minSdk 23 · JDK 17
 
@@ -88,6 +96,7 @@ MiniCalc/
 
 ## Changelog
 
+- **1.2 (2026-09-17)** — Cursor editing (tap-to-place, select-to-replace, slide-to-move with haptics), ANS + memory with M badge, postfix `%`, `±`, `exp`/`abs`, tap-to-copy, thousands separators, release-key signing. APK ~116 KB.
 - **1.1 (2026-09-16)** — Pure-framework rewrite, FitTextView + adaptive gaps, ANGLES in Settings, full-bleed mipmap icons, CI releases. APK ~110 KB.
 
 ## License
