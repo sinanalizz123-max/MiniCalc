@@ -6,14 +6,77 @@ import java.util.Locale;
 
 public class MathEvaluator {
 
+    private static double lastAns = 0;
+
+    public static double getLastAns() { return lastAns; }
+    public static void setLastAns(double v) { lastAns = v; }
+
     public static double eval(String expression, boolean isDeg) throws Exception {
-        String expr = prepareExpression(expression);
-        Parser parser = new Parser(expr, isDeg);
-        return parser.parse();
+        return eval(expression, isDeg, lastAns, true);
     }
 
-    private static String prepareExpression(String s) {
+    public static double eval(String expression, boolean isDeg, double ans) throws Exception {
+        return eval(expression, isDeg, ans, true);
+    }
+
+    // Live preview / memory peek: evaluates without touching lastAns,
+    // so ANS always means "last committed (=) result".
+    public static double evalPreview(String expression, boolean isDeg) throws Exception {
+        return eval(expression, isDeg, lastAns, false);
+    }
+
+    private static double eval(String expression, boolean isDeg, double ans, boolean commit) throws Exception {
+        String expr = prepareExpression(expression, ans);
+        Parser parser = new Parser(expr, isDeg);
+        double r = parser.parse();
+        if (commit) lastAns = r;
+        return r;
+    }
+
+    // Known identifier words, longest first, for splitting runs like "pie" -> pi*e.
+    private static final String[] WORD_TOKENS = {
+            "asin", "acos", "atan", "sqrt", "cbrt",
+            "sin", "cos", "tan", "log", "exp", "abs",
+            "ln", "pi", "e" };
+
+    // Greedy longest-match split of a letter run; null unless it covers the whole run.
+    // Unknown words (typos like "sinn") return null and are left for the parser to reject.
+    private static java.util.List<String> splitIdentifiers(String run) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        int p = 0;
+        while (p < run.length()) {
+            String best = null;
+            for (String w : WORD_TOKENS) {
+                if (run.startsWith(w, p) && (best == null || w.length() > best.length())) best = w;
+            }
+            if (best == null) return null;
+            out.add(best);
+            p += best.length();
+        }
+        return out;
+    }
+
+    private static String prepareExpression(String s, double ans) {
         if (s == null) return "0";
+        String ansStr = "(" + formatResult(ans) + ")";
+        String low = s.toLowerCase(Locale.US);
+        if (low.contains("ans")) {
+            StringBuilder patched = new StringBuilder();
+            int p = 0;
+            while (p < s.length()) {
+                if (p + 2 < s.length()
+                        && Character.toLowerCase(s.charAt(p)) == 'a'
+                        && Character.toLowerCase(s.charAt(p + 1)) == 'n'
+                        && Character.toLowerCase(s.charAt(p + 2)) == 's') {
+                    patched.append(ansStr);
+                    p += 3;
+                } else {
+                    patched.append(s.charAt(p));
+                    p++;
+                }
+            }
+            s = patched.toString();
+        }
         s = s.replace("−", "-")
              .replace("×", "*")
              .replace("÷", "/")
@@ -22,8 +85,9 @@ public class MathEvaluator {
              .replace("∛", "cbrt");
 
         // Insert implicit multiplication '*' to make the grammar regular.
-        // Never inside identifiers like sin/asin/sqrt, keep scientific notation
-        // (1e15, 2e-3) intact, and reject malformed exponents like "5e".
+        // Adjacent known words split (pie -> pi*e); unknown words are left
+        // for the parser to reject. Keeps scientific notation (1e15, 2e-3)
+        // intact, and rejects malformed exponents like "5e".
         String t = s.toLowerCase(Locale.US);
         StringBuilder out = new StringBuilder();
         boolean primaryEnd = false; // previous token completed a value (num, ')', constant)
@@ -53,15 +117,18 @@ public class MathEvaluator {
             } else if (c >= 'a' && c <= 'z') {
                 int j = i;
                 while (j < n && t.charAt(j) >= 'a' && t.charAt(j) <= 'z') j++;
-                String id = t.substring(i, j);
-                boolean isConstant = id.equals("pi") || id.equals("e");
-                // "2e" is malformed scientific notation -> leave it for the parser to reject
-                boolean suppress = id.equals("e") && lastNumber;
-                if (primaryEnd && !suppress) out.append('*');
-                out.append(id);
-                primaryEnd = isConstant;
-                constEnd = isConstant;
-                lastNumber = false;
+                java.util.List<String> tokens = splitIdentifiers(t.substring(i, j));
+                if (tokens == null) tokens = java.util.Collections.singletonList(t.substring(i, j));
+                for (String id : tokens) {
+                    boolean isConstant = id.equals("pi") || id.equals("e");
+                    // "2e" is malformed scientific notation -> leave it for the parser to reject
+                    boolean suppress = id.equals("e") && lastNumber;
+                    if (primaryEnd && !suppress) out.append('*');
+                    out.append(id);
+                    primaryEnd = isConstant;
+                    constEnd = isConstant;
+                    lastNumber = false;
+                }
                 i = j;
             } else if (c == '(') {
                 if (primaryEnd) out.append('*');
@@ -157,8 +224,8 @@ public class MathEvaluator {
 
         // Grammar:
         // expression = term ('+' term | '-' term)*
-        // term = factor ('*' factor | '/' factor | '%' factor)*
-        // factor = +factor | -factor | primary ('^' factor | '!')*
+        // term = factor ('*' factor | '/' factor)*
+        // factor = +factor | -factor | primary ('^' factor | '!' | '%')*
 
         double parseExpression() throws Exception {
             double x = parseTerm();
@@ -177,9 +244,6 @@ public class MathEvaluator {
                     double div = parseFactor();
                     if (div == 0) throw new ArithmeticException("Division by zero");
                     x /= div;
-                } else if (eat('%')) {
-                    double mod = parseFactor();
-                    x %= mod;
                 } else return x;
             }
         }
@@ -261,6 +325,9 @@ public class MathEvaluator {
                             if (x <= 0) throw new ArithmeticException("Invalid log input");
                             x = Math.log10(x);
                             break;
+                        case "exp":
+                            x = Math.exp(x);
+                            break;
                         case "abs":
                             x = Math.abs(x);
                             break;
@@ -272,13 +339,15 @@ public class MathEvaluator {
                 throw new RuntimeException("Unexpected character: " + (char) ch);
             }
 
-            // Handle power '^' and factorial '!'
+            // Handle power '^', factorial '!' and postfix '%'
             while (true) {
                 if (eat('^')) {
                     double pow = parseFactor();
                     x = Math.pow(x, pow);
                 } else if (eat('!')) {
                     x = factorial((long) x);
+                } else if (eat('%')) {
+                    x = x / 100.0;
                 } else {
                     break;
                 }
