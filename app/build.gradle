@@ -13,11 +13,38 @@ android {
         versionName '1.2'
         resourceConfigurations += ['en']
     }
+    signingConfigs {
+        release {
+            // Release key lives OUTSIDE the repo (same key as Nothing Buds).
+            // Passwords come only from the environment, never committed:
+            // RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD.
+            // Keystore path overridable via RELEASE_KEYSTORE_FILE.
+            // Machines without the key (e.g. CI) fall back to debug signing.
+            def ksPath = System.getenv("RELEASE_KEYSTORE_FILE")
+                    ?: "/storage/emulated/0/opencode/keystore/release-key.jks"
+            def ksFile = file(ksPath)
+            def storePw = System.getenv("RELEASE_STORE_PASSWORD")
+            def alias = System.getenv("RELEASE_KEY_ALIAS")
+            def keyPw = System.getenv("RELEASE_KEY_PASSWORD")
+            if (ksFile.exists() && storePw && alias && keyPw) {
+                storeFile ksFile
+                storePassword storePw
+                keyAlias alias
+                keyPassword keyPw
+            } else {
+                println("WARNING: release keystore unavailable, signing with debug key")
+                storeFile file("${System.getProperty("user.home")}/.android/debug.keystore")
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
