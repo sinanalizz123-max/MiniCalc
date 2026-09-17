@@ -15,18 +15,21 @@ android {
     }
     signingConfigs {
         release {
-            // Release key lives OUTSIDE the repo (same key as Nothing Buds).
+            // Release keystore lives outside the repo and is never committed.
+            // Path: local.properties `release.keystore`, or RELEASE_KEYSTORE_FILE.
             // Passwords come only from the environment, never committed:
             // RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD.
-            // Keystore path overridable via RELEASE_KEYSTORE_FILE.
-            // Machines without the key (e.g. CI) fall back to debug signing.
-            def ksPath = System.getenv("RELEASE_KEYSTORE_FILE")
-                    ?: "/storage/emulated/0/opencode/keystore/release-key.jks"
-            def ksFile = file(ksPath)
+            // Without a key (e.g. CI) falls back to debug signing.
+            def locProps = new Properties()
+            def locFile = file("${rootDir}/local.properties")
+            if (locFile.exists()) locFile.withInputStream { locProps.load(it) }
+            def ksPath = locProps.getProperty("release.keystore")
+                    ?: System.getenv("RELEASE_KEYSTORE_FILE")
+            def ksFile = ksPath ? file(ksPath) : null
             def storePw = System.getenv("RELEASE_STORE_PASSWORD")
             def alias = System.getenv("RELEASE_KEY_ALIAS")
             def keyPw = System.getenv("RELEASE_KEY_PASSWORD")
-            if (ksFile.exists() && storePw && alias && keyPw) {
+            if (ksFile != null && ksFile.exists() && storePw && alias && keyPw) {
                 storeFile ksFile
                 storePassword storePw
                 keyAlias alias

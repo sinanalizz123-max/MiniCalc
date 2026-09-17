@@ -68,7 +68,7 @@ studio build ~/MiniCalc :app:assembleRelease
 # → app/build/outputs/apk/release/MiniCalc_1.2.apk  (release-key signed)
 ```
 
-Release signing uses a keystore outside the repo (passwords via environment only — see `app/build.gradle`); machines without the key fall back to debug signing so CI stays green.
+Release builds are signed with a dedicated release key (kept outside the repo; credentials via environment only — see `app/build.gradle`).
 
 Toolchain: AGP 8.5.2 · Gradle 9.7.1 · compileSdk / targetSdk 34 · minSdk 23 · JDK 17
 
